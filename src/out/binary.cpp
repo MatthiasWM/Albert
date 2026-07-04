@@ -16,7 +16,7 @@ int out_binary(const std::string_view arg) {
     std::string filename = std::string(arg);
     std::cout << "Generating binary dump of ROM data: " << filename << std::endl;
 
-    std::ofstream file(filename, std::ios::binary);
+    std::ofstream file(filename, std::ios::binary|std::ios::trunc|std::ios::out);
     if (!file) {
         std::cerr << "Failed to open output file: " << filename << std::endl;
         return -1;

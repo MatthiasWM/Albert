@@ -2,10 +2,50 @@
 
 #include "../types.h"
 #include "../memory.h"
+#include "../attributes.h"
 
+#include <chrono>
+#include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
+
+/*
+    https://software-dl.ti.com/codegen/docs/tiarmclang/compiler_tools_user_guide/gnu_syntax_asm_language/gnu_directives/alphabetical_directive_directory.html
+
+    unknown -> .word 0x00000000
+    unused -> .fill 18414, 4, 0xFFFFFFFF (count, valuesize, value)
+              .space numbytes, value
+              .double
+              .string16
+    symbols -> 	.equ	VEC_kPCMCIA3End, _start+0x70000000
+*/
+
+static void write_range(std::ofstream& out, Addr start, Addr end) {
+    for (Addr addr = start; addr < end; ) {
+        auto& attr = gAttr.at(addr);
+        if (attr.is_unused()) {
+            Addr unused_words = 0;
+            while (addr < end && gAttr.at(addr).is_unused()) {
+                ++unused_words;
+                addr += 4;
+            }
+            out << "\t.fill\t" << std::dec << unused_words << ", 4, 0xFFFFFFFF\n";
+            continue;
+        }
+
+        if (attr.is_unknown()) {
+            uint32_t word = gMem.w[addr];
+            out << "\t.word\t0x" << std::hex << std::setw(8) << std::setfill('0') << word << "\n";
+        } else {
+            uint32_t word = gMem.w[addr];
+            out << "\t.word\t0x" << std::hex << std::setw(8) << std::setfill('0') << word << "\n";
+        }
+
+        addr += 4;
+    }
+}
 
 /**
  * Writes the ROM image as ARM32 assembler, collecting all available data.
@@ -15,20 +55,49 @@
 int out_asm(const std::string_view arg) {
     std::string filename = std::string(arg);
     std::cout << "Outputting ARM32 assembler to " << filename << std::endl;
-/*
-    std::ofstream file(filename, std::ios::binary);
-    if (!file) {
+
+    std::ofstream out(filename, std::ios::binary|std::ios::trunc|std::ios::out);
+    if (!out) {
         std::cerr << "Failed to open output file: " << filename << std::endl;
         return -1;
     }
 
-    const auto* src = gMem.raw_data(0, k8MB);
-    file.write(reinterpret_cast<const char*>(src), static_cast<std::streamsize>(k8MB));
-    if (!file) {
-        std::cerr << "Failed to write assembler output to file: " << filename << std::endl;
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    const std::tm* local_tm = std::localtime(&now_time);
+    if (!local_tm) {
+        std::cerr << "Failed to get local time" << std::endl;
         return -1;
     }
-*/
+    out << ";  Albert ROM image tool\n";
+    out << ";  Created by Albert on " << std::put_time(local_tm, "%Y-%m-%d %H:%M:%S") << "\n\n";
+
+    out <<
+R"asm(
+	.include	"macros.s"
+
+	.text
+	.org	0
+
+	.global	_start
+_start:
+
+)asm";
+
+    write_range(out, 0, k8MB);
+
+    out <<
+R"asm(
+
+	.end
+)asm";
+
+    if (!out) {
+        std::cerr << "Failed to write full assembler file: " << filename << std::endl;
+        return -1;
+    }
+    out.close();
+
     // TODO: Implement ARM32 disassembly output
     return 0;
 }

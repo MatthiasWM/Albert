@@ -30,5 +30,34 @@ Argument are alway optional with a sensible fallback.
                     defaults to "output/newtonos.s"
 --out-bin file      generate a binary dump of the ROM data
                     defaults to "output/717006.bin"
--h: print help text
+-h                  print help text
 ```
+
+Planning
+--------
+
+- create a minimal assembler output (`.word` for unknown, `.fill` for unused)
+- read symbols and labels from aif
+    - add symbols and labels map
+    - add op to read symbols and labels from aif and store in map
+    - add labels to the assembler output
+    - debug out put for duplicate symbols, and for duplicate addresses
+    - fix duplicates
+- introduce disassembler output
+    - add ARM32 disassembler
+    - add ARM32 attribute
+    - test with predefined ROM section
+- introduce static control flow analysis
+    - recursively follow code execution and set attributes
+    - update label type for jump and call targets
+    - find other pointer to function (vtables, patch table, protocols)
+- introduce static analysis of NewtonScript database
+- analyze REx0 and add ARM code and NewtonScript from REx packages
+- analyze symbols and nuild a type database
+- run clang over include files and improve type database
+- create a function and method database
+- analyse data flow inside every function and mark local data use
+- output single function, get AI to create C++ code, compare Norcroft compiler
+  result to assembler input
+- ongoing verification that the generate ROM is valid
+- find and remove magic values as much as possible

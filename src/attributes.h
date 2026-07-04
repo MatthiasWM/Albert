@@ -25,7 +25,9 @@ public:
     /** 2-bit type tag for address classification. */
     T type:2;
     void set_unused() { type = T::other; }
-    void set_unknown() { type = T::other; }
+    bool is_unused() const { return type == T::other; }
+    void set_unknown() { type = T::arm; }
+    bool is_unknown() const { return type == T::arm; }
 };
 
 /**
