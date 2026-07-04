@@ -10,6 +10,7 @@ add_executable(albert
     src/op/aif.cpp
     src/op/rex.cpp
     src/out/binary.cpp
+    src/out/asm.cpp
 )
 
 target_compile_features(albert PRIVATE cxx_std_20)

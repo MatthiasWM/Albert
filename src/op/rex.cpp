@@ -2,6 +2,7 @@
 
 #include "../types.h"
 #include "../memory.h"
+#include "../attributes.h"
 
 #include <fstream>
 #include <iostream>
@@ -33,6 +34,8 @@ int rex_load_binary(const std::string_view arg) {
         std::cerr << "Failed to read full REx section from file: " << filename << std::endl;
         return -1;
     }
+
+    gAttr.range(kRexDataOffset, kRexDataEnd, [](Attr& a) { a.set_unknown(); });
 
     rex_loaded = true;
     return 0;

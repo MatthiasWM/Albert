@@ -45,19 +45,25 @@ int rex_load_binary(const std::string_view arg);
 constexpr Operators op_rex = {
     "--rex", "load the ROM extension", "input/Senior CirrusNoDebug high",
     &rex_load_binary, { &op_aif } };
+extern int out_asm(const std::string_view arg);
 constexpr Operators op_out_asm = {
     "--out-asm", "generate an annotated ARM32 disassembly", "output/newtonos.s",
-    nullptr, { &op_aif, &op_rex } };
+    &out_asm, { &op_aif, &op_rex } };
 extern int out_binary(const std::string_view arg);
 constexpr Operators op_out_binary = {
     "--out-bin", "generate a binary dump of the ROM data", "output/717006.bin",
     &out_binary, { &op_aif, &op_rex } };
+extern int print_help(const std::string_view arg);
+constexpr Operators op_help = {
+    "-h", "print help text", "",
+    &print_help, { } };
 
 static constexpr Operators const* ops[] = {
     &op_aif,
     &op_rex,
     &op_out_asm,
     &op_out_binary,
+    &op_help
 };
 
 /**
@@ -66,6 +72,7 @@ static constexpr Operators const* ops[] = {
  * @return 0 on success, negative value when an operator is unknown.
  */
 int apply_operators(const std::vector<std::pair<std::string, std::string>>& args) {
+    bool need_help = true; // Assume help is needed unless an operator is found.
     for (const auto& [op_name, arg] : args) {
         bool found = false;
         for (const auto* op : ops) {
@@ -78,7 +85,26 @@ int apply_operators(const std::vector<std::pair<std::string, std::string>>& args
         if (!found) {
             std::cerr << "Error: Unknown operator " << op_name << "\n";
             return -1;
+        } else {
+            need_help = false;
         }
+    }
+    if (need_help) {
+        print_help("");
+    }
+    return 0;
+}
+
+int print_help(const std::string_view arg) {
+    std::cout << "Albert ROM image tool\n";
+    std::cout << "Usage: albert [operator] [argument]\n";
+    std::cout << "Available operators:\n";
+    for (const auto* op : ops) {
+        std::cout << "  " << op->name << ": " << op->summary;
+        if (!op->fallback.empty()) {
+            std::cout << " (default: " << op->fallback << ")";
+        }
+        std::cout << "\n";
     }
     return 0;
 }

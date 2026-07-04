@@ -26,6 +26,9 @@ Argument are alway optional with a sensible fallback.
                     defaults to "input/Senior CirrusNoDebug image"
 --rex file          load the ROM extensionand copy the binary data
                     defaults to "input/Senior CirrusNoDebug high"
+--out-asm file      generate an annotated ARM32 disassembly
+                    defaults to "output/newtonos.s"
 --out-bin file      generate a binary dump of the ROM data
                     defaults to "output/717006.bin"
+-h: print help text
 ```
