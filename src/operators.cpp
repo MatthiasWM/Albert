@@ -41,14 +41,22 @@ extern int aif_load_binary(const std::string_view arg);
 constexpr Operators op_aif {
      "--aif", "load aif ROM file", "input/Senior CirrusNoDebug image",
      &aif_load_binary, {} };
-int rex_load_binary(const std::string_view arg);
+extern int aif_load_symbols(const std::string_view arg);
+constexpr Operators op_aif_symbols {
+     "--aif-symbols", "load aif ROM symbols", "input/Senior CirrusNoDebug image",
+     &aif_load_symbols, {} };
+extern int eval_cpp_symbols(const std::string_view arg);
+constexpr Operators op_eval_cpp_symbols {
+     "--cpp-symbols", "evaluate C++ symbols", "",
+     &eval_cpp_symbols, { &op_aif_symbols } };
+extern int rex_load_binary(const std::string_view arg);
 constexpr Operators op_rex = {
     "--rex", "load the ROM extension", "input/Senior CirrusNoDebug high",
     &rex_load_binary, { &op_aif } };
 extern int out_asm(const std::string_view arg);
 constexpr Operators op_out_asm = {
     "--out-asm", "generate an annotated ARM32 disassembly", "output/newtonos.s",
-    &out_asm, { &op_aif, &op_rex } };
+    &out_asm, { &op_aif, &op_rex, &op_eval_cpp_symbols } };
 extern int out_binary(const std::string_view arg);
 constexpr Operators op_out_binary = {
     "--out-bin", "generate a binary dump of the ROM data", "output/717006.bin",

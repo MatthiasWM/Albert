@@ -18,7 +18,7 @@
     Debugging data
 */
 
-#include "../types.h"
+#include "../main.h"
 #include "../memory.h"
 #include "../attributes.h"
 
@@ -26,7 +26,7 @@
 #include <iostream>
 #include <string>
 
-static bool aif_loaded = false;
+static bool cpp_symbols = false;
 
 /**
  * Loads AIF ROM payload into memory at address 0.
@@ -36,7 +36,7 @@ static bool aif_loaded = false;
  * @return 0 on success, negative value on failure.
  */
 int aif_load_binary(const std::string_view arg) {
-    if (aif_loaded) {
+    if (cpp_symbols) {
         return 0;
     }
     std::string filename = std::string(arg);
@@ -63,7 +63,7 @@ int aif_load_binary(const std::string_view arg) {
 
     gAttr.range(0, kAifDataSize, [](Attr& a) { a.set_unknown(); });
 
-    aif_loaded = true;
+    cpp_symbols = true;
     return 0;
 }
 

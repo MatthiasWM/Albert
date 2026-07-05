@@ -1,9 +1,9 @@
 
 
-#ifndef MEMORY_H
-#define MEMORY_H
+#ifndef ALBERT_SRC_MEMORY_H
+#define ALBERT_SRC_MEMORY_H
 
-#include "types.h"
+#include "main.h"
 
 class Memory;
 class Attr;
@@ -111,4 +111,4 @@ inline Attr& AttributeAccessor::operator[](Addr index) const {
 
 extern Memory gMem;
 
-#endif // MEMORY_H
+#endif // ALBERT_SRC_MEMORY_H

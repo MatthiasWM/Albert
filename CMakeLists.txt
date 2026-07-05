@@ -3,12 +3,17 @@ cmake_minimum_required(VERSION 3.20)
 project(Albert LANGUAGES CXX)
 
 add_executable(albert
+    src/arm.cpp
     src/main.cpp
     src/operators.cpp
     src/memory.cpp
     src/attributes.cpp
+    src/symbols.cpp
+    src/types.cpp
+    src/op/aif_symbols.cpp
     src/op/aif.cpp
     src/op/rex.cpp
+    src/op/cpp_symbols.cpp
     src/out/binary.cpp
     src/out/asm.cpp
 )

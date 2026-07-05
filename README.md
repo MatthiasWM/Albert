@@ -39,21 +39,35 @@ Planning
 - create a minimal assembler output (`.word` for unknown, `.fill` for unused)
 - read symbols and labels from aif
     - add symbols and labels map
+        - symbol maps added
     - add op to read symbols and labels from aif and store in map
+        - all symbols are read from the aif file
     - add labels to the assembler output
-    - debug out put for duplicate symbols, and for duplicate addresses
+        - done - looks funny
+    - debug output for duplicate symbols, and for duplicate addresses
+        - we do have a bunch of addresses with multiple symbols, but that's ok
+        - we do *not* have duplicate labels, which is great!
     - fix duplicates
-- introduce disassembler output
-    - add ARM32 disassembler
-    - add ARM32 attribute
-    - test with predefined ROM section
+        - done
+- analyze symbols and build a type database
+    - find C++ symbols
+        - mostly done, but need to handle exception
+    - extract those that are function pointers and set the call target attribute
+        - done, change attribute from arm to other.unevaluated jump target
+    - extract the class and add it to the types
+        - next
+    - extract all arguments and build a function type
+- find arm call targets
+    - from vtables
+    - from classinfos
+    - from the patch table
 - introduce static control flow analysis
     - recursively follow code execution and set attributes
     - update label type for jump and call targets
-    - find other pointer to function (vtables, patch table, protocols)
+- introduce disassembler output
+    - add ARM32 disassembler to arm code marked by attributes
 - introduce static analysis of NewtonScript database
 - analyze REx0 and add ARM code and NewtonScript from REx packages
-- analyze symbols and nuild a type database
 - run clang over include files and improve type database
 - create a function and method database
 - analyse data flow inside every function and mark local data use
