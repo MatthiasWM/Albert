@@ -5,7 +5,7 @@
  aif file.
 */
 
-#include "../symbols.h"
+#include "../labels.h"
 #include "../main.h"
 
 #include <fstream>
@@ -35,7 +35,7 @@ bool read_u32_be(std::istream& in, uint32_t& out) {
 
 } // namespace
 
-static bool cpp_symbols = false;
+static bool cpp_symbols_op_done = false;
 
 /**
  * Loads AIF ROM symbols into the symbol table.
@@ -45,7 +45,7 @@ static bool cpp_symbols = false;
  * @return 0 on success, negative value on failure.
  */
 int aif_load_symbols(const std::string_view arg) {
-    if (cpp_symbols) {
+    if (cpp_symbols_op_done) {
         return 0;
     }
 
@@ -60,7 +60,7 @@ int aif_load_symbols(const std::string_view arg) {
 
     const auto add_if_not_ignored = [&](const std::string& name, Addr address, uint8_t type) {
         if (ignored_symbols.find(name) == ignored_symbols.end()) {
-            add_global_symbol(name, address, type);
+            add_named_label(name, address, type);
         }
     };
 
@@ -161,10 +161,10 @@ int aif_load_symbols(const std::string_view arg) {
         add_if_not_ignored(sym_name, value, flags);
     }
 
-    cpp_symbols = true;
+    cpp_symbols_op_done = true;
 
     #if 0 // list all symbols in the symbol table
-    for (const auto& [addr, sym] : gSymbolsByAddress) {
+    for (const auto& [addr, sym] : gLabelByAddress) {
         std::cout << "Symbol: " << sym.name << " at 0x" << std::hex << std::setw(8) << std::setfill('0') << addr
                   << " type: " << std::dec << static_cast<int>(sym.type) << std::endl;
     }
@@ -199,7 +199,7 @@ int aif_load_symbols(const std::string_view arg) {
 
     #if 0 // list all symbols with a duplicate name, but different address
     bool found_duplicate_names = false;
-    for (auto it = gSymbolsByName.begin(); it != gSymbolsByName.end(); ) {
+    for (auto it = gLabelByName.begin(); it != gSymbolsByName.end(); ) {
         const std::string& name = it->first;
         const auto range = gSymbolsByName.equal_range(name);
 

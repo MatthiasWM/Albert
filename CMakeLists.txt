@@ -8,6 +8,7 @@ add_executable(albert
     src/operators.cpp
     src/memory.cpp
     src/attributes.cpp
+    src/labels.cpp
     src/symbols.cpp
     src/types.cpp
     src/op/aif_symbols.cpp

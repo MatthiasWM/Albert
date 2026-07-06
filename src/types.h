@@ -10,14 +10,17 @@
 #include <map>
 #include <memory>
 
-class Member {
-public:
-    std::string name { };
-    std::string type { };
-    int offset { -1 }; // offset in bytes from start of struct/class
-    uint32_t flags { 0 }; // flags for member: static, const, volatile, etc.
-};
 
+class ClassTypeInfo;
+class FunctionTypeInfo;
+class Symbol;
+
+/**
+ * Hold the basic information for any supported C and C++ type.
+ *
+ * If the type is complex (class, struct, fucntion, union), one of the
+ * TypeInfo classes is added.
+ */
 class Type {
 public:
     std::string name { };
@@ -28,7 +31,8 @@ public:
         kVoid,
         kElipsis,
         kInt,
-        kClass,
+        kClass, // if set, `class_type` is valid
+        kFunction, // if set, `function_type` is valid
     };
     T type { T::kUnknown };
     int size { -1 }; // size in bytes, -1 = unknown
@@ -44,23 +48,46 @@ public:
     // array: element type, number of elements, size, alignment
     // union: members, size, alignment
     // enum: values, size, alignment
+    union {
+        ClassTypeInfo* class_type = nullptr;
+        FunctionTypeInfo* function_type;
+    };
+    Type(const std::string& name);
+    constexpr Type(const std::string& name, uint32_t flags, T type, int size=-1)
+        : name(name), flags(flags), type(type), size(size) {};
+    ~Type();
+    void print(std::ostream& out) const;
+    bool promote_to_class();
+    bool promote_to_function();
+    // --- kClass helpers
+    Symbol* tag_member_function(const std::string& name, Type* function);
 };
 
-class ClassType : public Type {
+class ClassTypeInfo {
 public:
     std::string base_class { };
-    std::vector<Member> members { };
-    std::vector<Member> methods { };
-    std::vector<int> vtable { };    // index into methods?!
-    ClassType(const std::string& name);
+    std::vector<Symbol*> members { };
+    std::map<std::string, Symbol*> methods { };
+    Symbol* tag_member_function(const std::string& name, Type* klass, Type* function);
+    void print(std::ostream& out) const;
+};
+
+class FunctionTypeInfo {
+public:
+    std::string return_type { };
+    std::vector<Type*> args { };
+    void print(std::ostream& out) const;
 };
 
 class TypeMap {
 public:
-    std::map<std::string, std::unique_ptr<Type>> type_map;
+    // using raw pointers for simplicity, we don;t really care about deleting these types
+    std::map<std::string, Type*> map;
     TypeMap();
-    Type* make(const std::string& name);
-    ClassType* make_class(const std::string& name);
+    Type* tag_type(const std::string& name);
+    Type* tag_class(const std::string& name);
+    Type* tag_function_type(const std::string& arglist);
+    Type* tag_member_function_type(const std::string& klass, const std::string& arglist);
     void print();
 };
 

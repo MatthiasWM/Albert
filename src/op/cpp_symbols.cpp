@@ -1,8 +1,9 @@
 
 
-#include "../symbols.h"
+#include "../labels.h"
 #include "../attributes.h"
 #include "../types.h"
+#include "../symbols.h"
 
 #include <fstream>
 #include <iomanip>
@@ -12,7 +13,7 @@
 #include <utility>
 
 
-static bool cpp_symbols = false;
+static bool cpp_symbols_op_done = false;
 
 // convert names like "10TObjectPtrFRC6RefVar" into "TObjectPtr"
 // returns {name, bytes_to_skip}
@@ -228,7 +229,7 @@ static std::pair<std::string, int> eval_cpp_arglist_r(const std::string& str, bo
             }
         }
         if (!arg.empty()) {
-            gTypeMap.make(arg);
+            gTypeMap.tag_type(arg);
             std::string mod;
             while (ptr) { // TODO: different for pointer to function
                 if (ptr & 0x4) mod += " const";
@@ -241,7 +242,7 @@ static std::pair<std::string, int> eval_cpp_arglist_r(const std::string& str, bo
             } else {
                 arg = arg + mod;
             }
-            gTypeMap.make(arg);
+            gTypeMap.tag_type(arg);
             for (; repeat_arg > 0; --repeat_arg) {
                 args.push_back(arg);
                 if (!result.empty()) {
@@ -265,13 +266,13 @@ static std::pair<std::string, int> eval_cpp_arglist(const std::string& str) { //
 /**
  * Decode a decorated C++ label.
  */
-static void eval_cpp_symbol(const Symbol& sym) {
+Symbol* eval_cpp_symbol(const Label& sym) {
     bool is_static = false;
     bool is_const = false;
     std::string label = sym.name;
-    if (label.starts_with("__")) return;
+    if (label.starts_with("__")) return nullptr;
     auto uu = label.find("__");
-    if (uu == std::string::npos) return;
+    if (uu == std::string::npos) return nullptr;
 
     // handle names that end in a "_", followed by "__"
     while (label[uu+2] == '_') {
@@ -307,23 +308,29 @@ static void eval_cpp_symbol(const Symbol& sym) {
     if (label[uu] == 'F') {
         uu++;
         gAttr.at(sym.address).set_unresolved_call_target();
-        // TODO: add to list of functions to resolve later, after we have parsed all symbols
-        if (!klass.empty()) {
-            gTypeMap.make_class(klass);
-        }
-        auto [type, bytes_to_skip] = eval_cpp_arglist(label.substr(uu));
+        auto [arglist, bytes_to_skip] = eval_cpp_arglist(label.substr(uu));
         uu += bytes_to_skip;
         // TODO: static, const, return type, etc.
-        type = "(" + type + ")";
-        gTypeMap.make(type);
-        int xx = 3;
-        // TODO: add type
+        arglist = "(" + arglist + ")";
+        if (klass.empty()) {
+            Type* t = gTypeMap.tag_function_type(arglist);
+            FunctionSymbolInfo* info = new FunctionSymbolInfo{}; // arg names are not known
+            Symbol* s = new Symbol{name, t, sym.address, info};
+            gLabelByName[sym.name]->symbol = s;
+        } else {
+            Type* c = gTypeMap.tag_class(klass);
+            Type* t = gTypeMap.tag_member_function_type(klass, arglist);
+            Symbol* s = c->tag_member_function(name, t);
+            s->address = sym.address;
+            gLabelByName[sym.name]->symbol = s;
+        }
     } else {
         std::cout << "WARNING: unexpected C++ symbol format: " << label
             << " at 0x" << std::hex << std::setw(8) << std::setfill('0')
             << sym.address << " type: " << std::dec << static_cast<int>(sym.type)
             << " ID: " << label[uu] << std::endl;
     }
+    return nullptr;
 }
 
 /**
@@ -335,10 +342,10 @@ static void eval_cpp_symbol(const Symbol& sym) {
  * @return 0 on success, negative value on failure.
  */
 int eval_cpp_symbols(const std::string_view arg) {
-    if (cpp_symbols) {
+    if (cpp_symbols_op_done) {
         return 0;
     }
-    cpp_symbols = true;
+    cpp_symbols_op_done = true;
 
     std::cout << "Evaluating C++ symbols\n";
 
@@ -415,12 +422,12 @@ int eval_cpp_symbols(const std::string_view arg) {
     // __pvfn__
 
 
-    for (const auto& [addr, sym] : gSymbolsByAddress) {
+    for (const auto& [addr, label] : gLabelByAddress) {
         if (addr >= k8MB) break; // TODO: too strict! See system variables!
-        if (sym.name.starts_with("SYM__")) continue;
-        auto pos = sym.name.find("__");
+        if (label->name.starts_with("SYM__")) continue;
+        auto pos = label->name.find("__");
         if ((pos != std::string::npos) && (pos != 0)) { // TODO: avoid special cases for now
-            eval_cpp_symbol(sym);
+            eval_cpp_symbol(*label);
             // std::cout << "C++ symbol: " << sym.name << " at 0x" << std::hex << std::setw(8) << std::setfill('0') << addr
             //           << " type: " << std::dec << static_cast<int>(sym.type) << std::endl;
         }

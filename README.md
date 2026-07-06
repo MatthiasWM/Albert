@@ -49,17 +49,19 @@ Planning
         - we do *not* have duplicate labels, which is great!
     - fix duplicates
         - done
-- analyze symbols and build a type database
-    - find C++ symbols
+- analyze labels and symbols and build a type database
+    - find C++ labels
         - mostly done
-        - TODO: need to handle symbols starting with `__` like
+        - TODO: need to handle labels starting with `__` like
           constructor, destructor, operators, etc.
     - extract those that are function pointers and set the call target attribute
         - done
     - extract the class and add it to the types
-        - TODO: active, rework type storage to store a class type
+        - done
     - extract all arguments and build a function type
         - done
+    - add type and name as a symbol, linked from the original label
+        - ACTIVE: half way implemented, verify by printing all symbols
     - read the clang generated json file, compiling all headers
     - merge clang types and aif types
     - add type information to absolute addresses and class memeber offsets

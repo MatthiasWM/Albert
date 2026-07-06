@@ -26,7 +26,7 @@
 #include <iostream>
 #include <string>
 
-static bool cpp_symbols = false;
+static bool cpp_symbols_op_done = false;
 
 /**
  * Loads AIF ROM payload into memory at address 0.
@@ -36,7 +36,7 @@ static bool cpp_symbols = false;
  * @return 0 on success, negative value on failure.
  */
 int aif_load_binary(const std::string_view arg) {
-    if (cpp_symbols) {
+    if (cpp_symbols_op_done) {
         return 0;
     }
     std::string filename = std::string(arg);
@@ -63,7 +63,7 @@ int aif_load_binary(const std::string_view arg) {
 
     gAttr.range(0, kAifDataSize, [](Attr& a) { a.set_unknown(); });
 
-    cpp_symbols = true;
+    cpp_symbols_op_done = true;
     return 0;
 }
 
