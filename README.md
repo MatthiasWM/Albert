@@ -51,12 +51,18 @@ Planning
         - done
 - analyze symbols and build a type database
     - find C++ symbols
-        - mostly done, but need to handle exception
+        - mostly done
+        - TODO: need to handle symbols starting with `__` like
+          constructor, destructor, operators, etc.
     - extract those that are function pointers and set the call target attribute
-        - done, change attribute from arm to other.unevaluated jump target
+        - done
     - extract the class and add it to the types
-        - next
+        - TODO: active, rework type storage to store a class type
     - extract all arguments and build a function type
+        - done
+    - read the clang generated json file, compiling all headers
+    - merge clang types and aif types
+    - add type information to absolute addresses and class memeber offsets
 - find arm call targets
     - from vtables
     - from classinfos

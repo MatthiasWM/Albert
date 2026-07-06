@@ -2,6 +2,7 @@
 
 #include "../symbols.h"
 #include "../attributes.h"
+#include "../types.h"
 
 #include <fstream>
 #include <iomanip>
@@ -15,6 +16,12 @@ static bool cpp_symbols = false;
 
 // convert names like "10TObjectPtrFRC6RefVar" into "TObjectPtr"
 // returns {name, bytes_to_skip}
+
+// TODO: why doe this one slip through:
+// lN21PiP13PS_point_typesPsT7P8ppd_typeUiP11xrdata_type
+// ...(long, long, long, int *, PS_point_type *, short, short *, short *, ppd_type *, unsigned int, xrdata_type *)
+
+
 static std::pair<std::string, std::size_t> nn_symbol(const std::string& str)
 {
     std::size_t digits_end = 0;
@@ -35,6 +42,224 @@ static std::pair<std::string, std::size_t> nn_symbol(const std::string& str)
     }
 
     return {str.substr(digits_end, name_len), digits_end + name_len};
+}
+
+static std::vector<std::string> args;  // use for templates and repeat templates
+
+
+static std::pair<std::string, int> eval_cpp_arglist_r(const std::string& str, bool eval_one=false) { // TODO: static? const?
+    if ((str == "v") && (!eval_one)) {
+        return {"", 1};
+    }
+
+    std::string result;
+    std::size_t i = 0;
+    bool arglist_done = false;
+    while (i < str.size() && !arglist_done) {
+        int ix;
+        int repeat_arg = 1;
+        bool arg_done = false;
+        bool is_unsigned = false;
+        bool is_signed = false;
+        bool is_volatile = false;
+        uint32_t ptr = 0;
+        std::string arg;
+        while (i < str.size() && !arg_done) {
+            char c = str[i++];
+            switch (c) {
+                case '_':
+                    arglist_done = true;
+                    arg_done = true;
+                    i--; // don't consume the '_' character
+                    break;
+                case 'U': is_unsigned = true; break;
+                case 'S': is_signed = true; break;
+                case 'V': is_volatile = true; break;
+                case 'P':
+                    ptr <<= 4; // save previous pointer statements, if any
+                    ptr |= 1;  // mark this as a pointer
+                    break;
+                case 'R':
+                    ptr <<= 4; // save previous pointer statements, if any
+                    ptr |= 2;  // mark this as a reference
+                    break;
+                case 'C':
+                    ptr |= 4;  // mark this as const
+                    break;
+                case 'N':
+                    c = str[i++];
+                    repeat_arg = c - '0';
+                    /* fall through */
+                case 'T': // template
+                    c = str[i++]; // assume we have never more than 9 template arguments
+                    if (!isdigit(c)) {
+                        std::cout << "WARNING: unexpected character after 'T' in C++ symbol argument list: " << c
+                            << " in " << str << std::endl;
+                        arg_done = true;
+                        break;
+                    }
+                    ix = c - '1';
+                    if ((ix < 0) || (ix >= static_cast<int>(args.size()))) {
+                        std::cout << "WARNING: unexpected template argument index after 'T' in C++ symbol argument list: " << c
+                            << " in " << str << std::endl;
+                        arg_done = true;
+                        break;
+                    }
+                    arg = args[ix];
+                    arg_done = true;
+                    break;
+                case 'c':
+                    if (is_unsigned) arg += "unsigned ";
+                    if (is_signed) arg += "signed ";
+                    if (is_volatile) arg += "volatile ";
+                    arg += "char";
+                    arg_done = true;
+                    break;
+                case 's':
+                    if (is_unsigned) arg += "unsigned ";
+                    if (is_signed) arg += "signed ";
+                    if (is_volatile) arg += "volatile ";
+                    arg += "short";
+                    arg_done = true;
+                    break;
+                case 'i':
+                    if (is_unsigned) arg += "unsigned ";
+                    if (is_signed) arg += "signed ";
+                    if (is_volatile) arg += "volatile ";
+                    arg += "int";
+                    arg_done = true;
+                    break;
+                case 'l':
+                    if (is_unsigned) arg += "unsigned ";
+                    if (is_signed) arg += "signed ";
+                    if (is_volatile) arg += "volatile ";
+                    arg += "long";
+                    arg_done = true;
+                    break;
+                case 'v':
+                    arg = "void";
+                    arg_done = true;
+                    break;
+                case 'e':
+                    arg = "...";
+                    arg_done = true;
+                    break;
+                case 'd':
+                    if (is_volatile) arg += "volatile ";
+                    arg += "double";
+                    arg_done = true;
+                    break;
+                case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+                    {
+                        auto [name, bytes_to_skip] = nn_symbol(str.substr(i-1));
+                        if (!name.empty()) {
+                            arg = name;
+                            i += bytes_to_skip - 1;
+                        } else {
+                            std::cout << "WARNING: failed to parse C++ symbol argument type at index "<< (i-1) << " in " << str << std::endl;
+                        }
+                        arg_done = true;
+                    }
+                    break;
+                case 'F': // function
+                    {
+                        auto [name, bytes_to_skip] = eval_cpp_arglist_r(str.substr(i));
+                        arg = "(" + name + ")";
+                        i += bytes_to_skip;
+                        // TODO: what about the return type?
+                        if ((i < str.size()) && (str[i] == '_')) {
+                            i++; // skip the '_' character
+                            auto [return_type, return_bytes_to_skip] = eval_cpp_arglist_r(str.substr(i), true);
+                            arg = arg + " -> " + return_type;
+                            i += return_bytes_to_skip;
+                        }
+                    }
+                    arg_done = true;
+                    break;
+                case 'Q': // class::type
+                    {
+                        int depth = str[i++] - '0';
+                        while (depth > 0) {
+                            auto [klass, bytes_to_skip] = eval_cpp_arglist_r(str.substr(i), true);
+                            i += bytes_to_skip;
+                            if (!klass.empty()) {
+                                if (!arg.empty()) {
+                                    arg += "::";
+                                }
+                                arg += klass;
+                            } else {
+                                std::cout << "WARNING: failed to parse C++ symbol class at index "<< (i-1) << " in " << str << std::endl;
+                            }
+                            depth--;
+                        }
+                    }
+                    arg_done = true;
+                    break;
+                case 'A': // array
+                    {
+                        int array_size = 0;
+                        while (i < str.size() && isdigit(str[i])) {
+                            array_size = (array_size * 10) + (str[i] - '0');
+                            i++;
+                        }
+                        if (i < str.size() && str[i] == '_') {
+                            i++; // skip the '_' character
+                        }
+
+                    }
+                    // TODO: need to replce 'ptr' with a small stack for ptr, ref, and array
+                    arg_done = true;
+                    break;
+                case 'M': // member function pointer
+                    {
+                        auto [klass, bytes_to_skip] = eval_cpp_arglist_r(str.substr(i), true);
+                        i += bytes_to_skip;
+                        auto [func, func_bytes_to_skip] = eval_cpp_arglist_r(str.substr(i), true);
+                        i += func_bytes_to_skip;
+                        arg = "(" + klass + "::)" + func;
+                    }
+                    arg_done = true;
+                    break;
+                default:
+                    std::cout << "WARNING: unrecognized C++ symbol argument type: " << c
+                        << " in " << str << std::endl;
+                    arg_done = true;
+                    break;
+            }
+        }
+        if (!arg.empty()) {
+            gTypeMap.make(arg);
+            std::string mod;
+            while (ptr) { // TODO: different for pointer to function
+                if (ptr & 0x4) mod += " const";
+                if (ptr & 0x2) mod += "&";
+                if (ptr & 0x1) mod += "*";
+                ptr >>= 4;
+            }
+            if (arg.starts_with("(")) {
+                arg = "(" + mod + ")" + arg;
+            } else {
+                arg = arg + mod;
+            }
+            gTypeMap.make(arg);
+            for (; repeat_arg > 0; --repeat_arg) {
+                args.push_back(arg);
+                if (!result.empty()) {
+                    result += ", ";
+                }
+                result += arg;
+            }
+        }
+        if (eval_one) {
+            arglist_done = true;
+        }
+    }
+    return {result, i};
+}
+
+static std::pair<std::string, int> eval_cpp_arglist(const std::string& str) { // TODO: static? const?
+    args.clear();
+    return eval_cpp_arglist_r(str);
 }
 
 /**
@@ -81,23 +306,18 @@ static void eval_cpp_symbol(const Symbol& sym) {
     // function
     if (label[uu] == 'F') {
         uu++;
-        gAttr.at(sym.address).set_arm_call_target();
-        // if (!klass.empty()) gTypes.make_class(klass);
-        // TODO: parse arguments
-        std::cout << "Args: " << label.substr(uu) << std::endl;
-        // v = void
-        // P = pointer to...
-        // U = unsigned
-        // i = int
-        // c = char
-        // R = reference to...
-        // C = const
-        // 1..9 = type name follows
-        // l = long?
-        // Tnumber = template?
-        // s = ?
-        // Nnumbernumber = repeat template
-        // d = double
+        gAttr.at(sym.address).set_unresolved_call_target();
+        // TODO: add to list of functions to resolve later, after we have parsed all symbols
+        if (!klass.empty()) {
+            gTypeMap.make_class(klass);
+        }
+        auto [type, bytes_to_skip] = eval_cpp_arglist(label.substr(uu));
+        uu += bytes_to_skip;
+        // TODO: static, const, return type, etc.
+        type = "(" + type + ")";
+        gTypeMap.make(type);
+        int xx = 3;
+        // TODO: add type
     } else {
         std::cout << "WARNING: unexpected C++ symbol format: " << label
             << " at 0x" << std::hex << std::setw(8) << std::setfill('0')
@@ -197,6 +417,7 @@ int eval_cpp_symbols(const std::string_view arg) {
 
     for (const auto& [addr, sym] : gSymbolsByAddress) {
         if (addr >= k8MB) break; // TODO: too strict! See system variables!
+        if (sym.name.starts_with("SYM__")) continue;
         auto pos = sym.name.find("__");
         if ((pos != std::string::npos) && (pos != 0)) { // TODO: avoid special cases for now
             eval_cpp_symbol(sym);
@@ -205,5 +426,6 @@ int eval_cpp_symbols(const std::string_view arg) {
         }
     }
 
+    gTypeMap.print();
     return 0;
 }

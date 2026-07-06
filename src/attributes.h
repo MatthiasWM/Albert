@@ -25,6 +25,7 @@ public:
     enum class OT: uint32_t {
         unknown = 0,
         unused,
+        unresolved_call_target,
     };
 
     enum class DT: uint32_t {
@@ -65,6 +66,8 @@ public:
     bool is_unused() const { return type == T::other && other_type == OT::unused; }
     void set_unknown() { type = T::other; other_type = OT::unknown; }
     bool is_unknown() const { return type == T::other && other_type == OT::unknown; }
+    void set_unresolved_call_target() { type = T::other; other_type = OT::unresolved_call_target; }
+    bool is_unresolved_call_target() const { return type == T::other && other_type == OT::unresolved_call_target; }
     void set_arm() { type = T::arm; }
     void set_arm_call_target() { set_arm(); call_target = 1; }
 };
