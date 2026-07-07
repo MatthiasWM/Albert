@@ -62,6 +62,8 @@ Planning
         - done
     - add type and name as a symbol, linked from the original label
         - ACTIVE: half way implemented, verify by printing all symbols
+        - TODO: How can I find the owning class from the symbol?
+        - TODO: How can I list each argument to the function?
     - read the clang generated json file, compiling all headers
     - merge clang types and aif types
     - add type information to absolute addresses and class memeber offsets

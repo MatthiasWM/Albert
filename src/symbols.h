@@ -6,6 +6,7 @@
 #include "main.h"
 #include <string>
 #include <vector>
+#include <iostream>
 
 class Type;
 
@@ -43,6 +44,7 @@ public:
     ~Symbol() {
         delete info;
     }
+    void print(std::ostream& out) const;
 };
 
 

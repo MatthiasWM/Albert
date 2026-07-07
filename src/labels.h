@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <iostream>
 
 class Symbol;
 
@@ -38,6 +39,7 @@ public:
     uint8_t type; // TODO: not yet defined at all
     Label(const std::string& name, Addr address, uint8_t type)
         : name(name), address(address), type(type) {}
+    void print(std::ostream& out) const;
 };
 
 extern std::multimap<Addr, Label*> gLabelByAddress;

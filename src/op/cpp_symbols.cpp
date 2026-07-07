@@ -434,5 +434,11 @@ int eval_cpp_symbols(const std::string_view arg) {
     }
 
     gTypeMap.print();
+
+    auto it = gLabelByAddress.find(0x00029630);
+    if (it != gLabelByAddress.end()) {
+        it->second->print(std::cout);
+    }
+
     return 0;
 }
